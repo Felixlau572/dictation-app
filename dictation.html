@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="讓默寫變得好玩！幫助小學生練習中/英文單字和句子">
+<meta name="theme-color" content="#667eea">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<title>小小默寫家</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  min-height: 100vh; display: flex; justify-content: center; align-items: flex-start;
+  padding: 20px;
+}
+.app {
+  background: #fff; border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  max-width: 560px; width: 100%; overflow: hidden; margin-top: 20px;
+}
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff; padding: 28px 24px 20px; text-align: center;
+}
+.header h1 { font-size: 28px; letter-spacing: 2px; }
+.header p { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+.screen { display: none; padding: 28px 24px; }
+.screen.active { display: block; }
+.mode-cards { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.mode-card {
+  border: none; border-radius: 16px; padding: 22px 20px; font-size: 18px; font-weight: bold;
+  color: #333; cursor: pointer; transition: all 0.2s; text-align: left;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.mode-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.mode-card .icon { font-size: 32px; display: block; margin-bottom: 8px; }
+.mode-card .desc { font-size: 13px; font-weight: normal; color: #666; margin-top: 4px; }
+.mode-card.chinese { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
+.mode-card.english { background: linear-gradient(135deg, #fdef9a 0%, #b5de8a 100%); }
+.mode-card.upload { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); }
+
+/* Upload */
+.upload-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.upload-tab {
+  flex: 1; padding: 10px; border: 2px solid #d0d7ff; background: #fff;
+  border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: bold;
+  text-align: center; transition: all 0.2s;
+}
+.upload-tab.active, .upload-tab:hover { background: #667eea; color: #fff; border-color: #667eea; }
+.upload-area {
+  border: 3px dashed #d0d7ff; border-radius: 16px; padding: 32px 20px;
+  text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px; background: #fafbff;
+}
+.upload-area:hover { border-color: #667eea; background: #f0f3ff; }
+.upload-icon { font-size: 48px; }
+.upload-text { font-size: 15px; color: #888; margin-top: 8px; }
+.upload-hint { font-size: 12px; color: #aaa; margin-top: 6px; }
+.file-info { background: #f0f3ff; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: none; font-size: 14px; }
+.file-info.show { display: flex; align-items: center; justify-content: space-between; }
+.file-name { font-weight: bold; color: #333; }
+.file-remove { color: #f44336; cursor: pointer; font-size: 13px; }
+
+.pdf-status { padding: 14px 18px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; display: none; }
+.pdf-status.show { display: block; }
+.pdf-status.loading { background: #e3f2fd; color: #1565c0; }
+.pdf-status.done { background: #e8f5e9; color: #2e7d32; }
+.pdf-status.error { background: #ffebee; color: #c62828; }
+.pdf-progress { width: 100%; height: 6px; background: #ddd; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.pdf-progress-fill { height: 100%; background: #667eea; border-radius: 3px; transition: width 0.3s; width: 0%; }
+
+.text-result { background: #f8f9ff; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: none; }
+.text-result.show { display: block; }
+.text-result h4 { font-size: 14px; color: #888; margin-bottom: 8px; }
+.text-area {
+  width: 100%; min-height: 120px; padding: 10px; font-size: 14px;
+  border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical;
+  font-family: inherit; outline: none; line-height: 1.8;
+}
+.text-area:focus { border-color: #667eea; }
+
+.parse-options { margin-bottom: 16px; }
+.parse-options h4 { font-size: 14px; color: #888; margin-bottom: 8px; }
+.parse-options label {
+  display: block; padding: 10px 14px; margin-bottom: 8px;
+  border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer;
+  font-size: 14px; transition: all 0.2s;
+}
+.parse-options label:hover { border-color: #667eea; }
+
+.word-preview { background: #f8f9ff; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: none; }
+.word-preview.show { display: block; }
+.word-preview h4 { font-size: 14px; color: #888; margin-bottom: 8px; }
+.word-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.word-chip {
+  background: linear-gradient(135deg, #e8eaf6, #f3e5f5);
+  padding: 6px 14px; border-radius: 20px; font-size: 14px; border: 1px solid #c5cae9;
+}
+
+/* Quiz */
+.progress-bar { background: #eee; border-radius: 10px; height: 12px; margin-bottom: 20px; overflow: hidden; }
+.progress-fill { background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; border-radius: 10px; transition: width 0.3s; }
+.quiz-info { display: flex; justify-content: space-between; font-size: 14px; color: #888; margin-bottom: 8px; }
+.question-card {
+  background: #f8f9ff; border-radius: 16px; padding: 28px 20px;
+  text-align: center; margin-bottom: 16px; border: 2px dashed #d0d7ff;
+}
+.question-label { font-size: 13px; color: #888; margin-bottom: 8px; }
+.question-hint { font-size: 28px; font-weight: bold; color: #333; margin: 10px 0; min-height: 40px; line-height: 1.4; }
+.tts-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; }
+.tts-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border: none;
+  border-radius: 50%; width: 48px; height: 48px; font-size: 20px;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.tts-btn:hover { transform: scale(1.1); }
+.tts-btn.speaking { animation: pulse 0.8s infinite alternate; }
+.tts-btn.paused { animation: none; background: linear-gradient(135deg, #ff9800, #f57c00); }
+@keyframes pulse { from { box-shadow: 0 0 0 0 rgba(102,126,234,0.5); } to { box-shadow: 0 0 0 12px rgba(102,126,234,0); } }
+.speed-btns { display: flex; gap: 6px; }
+.speed-btn {
+  padding: 6px 14px; border-radius: 20px; border: 2px solid #d0d7ff;
+  background: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #555;
+}
+.speed-btn.active, .speed-btn:hover { background: #667eea; color: #fff; border-color: #667eea; }
+
+.answer-input {
+  width: 100%; padding: 14px 18px; font-size: 20px; border: 2px solid #d0d7ff;
+  border-radius: 12px; outline: none; text-align: center; transition: border-color 0.2s;
+  letter-spacing: 4px;
+}
+.answer-input:focus { border-color: #667eea; }
+.answer-input.correct { border-color: #4caf50; background: #f0fff0; }
+.answer-input.wrong { border-color: #f44336; background: #fff0f0; }
+
+.btn-row { display: flex; gap: 12px; margin-top: 20px; }
+.btn { flex: 1; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-secondary { background: #f0f0f0; color: #555; }
+.btn-secondary:hover { background: #e0e0e0; }
+.btn-success { background: linear-gradient(135deg, #4caf50, #2e7d32); color: #fff; }
+
+.feedback { margin-top: 16px; padding: 14px 18px; border-radius: 12px; font-size: 15px; display: none; }
+.feedback.show { display: block; }
+.feedback.correct-feedback { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.feedback.wrong-feedback { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+.feedback .correct-answer { font-weight: bold; font-size: 18px; margin-top: 4px; }
+
+/* Result */
+.result-card { text-align: center; padding: 20px; }
+.result-emoji { font-size: 72px; margin: 16px 0; }
+.result-score {
+  font-size: 56px; font-weight: bold;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.result-detail { margin: 20px 0; font-size: 15px; color: #666; }
+.result-detail .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.wrong-list { background: #fff8f8; border-radius: 12px; padding: 16px; margin-top: 16px; text-align: left; }
+.wrong-list h4 { color: #c62828; margin-bottom: 10px; }
+.wrong-list .item { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px dashed #ffcdd2; }
+
+.back-btn {
+  background: none; border: none; font-size: 14px; color: #667eea;
+  cursor: pointer; padding: 4px 0; margin-bottom: 16px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.back-btn:hover { text-decoration: underline; }
+.install-btn {
+  background: rgba(255,255,255,0.25); color: #fff; border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: bold;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+}
+.install-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.05); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>小小默寫家</h1>
+    <p>讓默寫變得好玩！</p>
+    <button id="installBtn" class="install-btn hidden" onclick="installApp()">📥 安裝到裝置</button>
+  </div>
+
+  <!-- Home Screen -->
+  <div class="screen active" id="homeScreen">
+    <div class="mode-cards">
+      <button class="mode-card chinese" onclick="startQuiz('chinese')">
+        <span class="icon">中文</span>
+        中文默寫
+        <div class="desc">看拼音或解釋，寫出正確的中文字詞</div>
+      </button>
+      <button class="mode-card english" onclick="startQuiz('english')">
+        <span class="icon">ABC</span>
+        英文默寫
+        <div class="desc">看中文意思，拼寫出正確的英文單字</div>
+      </button>
+      <button class="mode-card upload" onclick="showScreen('uploadScreen')">
+        <span class="icon">上傳</span>
+        上傳檔案出題
+        <div class="desc">上傳圖片或 PDF，自動辨識文字產生題目</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload Screen -->
+  <div class="screen" id="uploadScreen">
+    <button class="back-btn" onclick="resetUpload(); showScreen('homeScreen')">返回 主選單</button>
+    <h3>上傳圖片或 PDF 出題</h3>
+    <p style="font-size:13px;color:#888;margin:8px 0 20px;">上傳課本照片、考卷照片或 PDF 檔案，系統會自動辨識文字並產生默寫題目。</p>
+
+    <div class="upload-tabs">
+      <div class="upload-tab active" onclick="switchTab('image')" id="tabImage">上傳圖片</div>
+      <div class="upload-tab" onclick="switchTab('pdf')" id="tabPdf">上傳 PDF</div>
+    </div>
+
+    <div id="imageArea">
+      <div class="upload-area" id="imgDropArea" onclick="document.getElementById('imgInput').click()">
+        <div class="upload-icon">相機</div>
+        <div class="upload-text">點此選擇照片，或直接拖曳照片到這裡</div>
+        <div class="upload-hint">支援 JPG、PNG 格式</div>
+      </div>
+      <input type="file" id="imgInput" accept="image/*" hidden onchange="handleImage(event)">
+    </div>
+
+    <div id="pdfArea" style="display:none;">
+      <div class="upload-area" id="pdfDropArea" onclick="document.getElementById('pdfInput').click()">
+        <div class="upload-icon">PDF</div>
+        <div class="upload-text">點此選擇 PDF 檔案，或直接拖曳 PDF 到這裡</div>
+        <div class="upload-hint">支援 PDF 格式（文字型 PDF 效果最佳）</div>
+      </div>
+      <input type="file" id="pdfInput" accept=".pdf" hidden onchange="handlePdf(event)">
+    </div>
+
+    <div class="file-info" id="fileInfo">
+      <span class="file-name" id="fileName"></span>
+      <span class="file-remove" onclick="resetUpload()">移除</span>
+    </div>
+
+    <div id="imgPreviewBox" style="display:none; margin-bottom:16px;">
+      <img id="imgPreview" style="width:100%;border-radius:12px;max-height:250px;object-fit:contain;background:#f0f0f0;">
+    </div>
+
+    <div class="pdf-status" id="fileStatus">
+      <span id="fileStatusText">處理中...</span>
+      <div class="pdf-progress"><div class="pdf-progress-fill" id="fileProgressFill"></div></div>
+    </div>
+
+    <div class="text-result" id="textResult">
+      <h4>辨識結果預覽（可編輯）：</h4>
+      <textarea class="text-area" id="textArea" rows="6" placeholder="辨識結果會出現在這裡..."></textarea>
+    </div>
+
+    <div class="parse-options" id="parseOptions" style="display:none;">
+      <h4>請選擇題目類型：</h4>
+      <label><input type="radio" name="parseMode" value="chinese" onchange="parseWords()"> 中文單字默寫（擷取中文字詞，語音讀出拼音）</label>
+      <label><input type="radio" name="parseMode" value="chinese-sentence" onchange="parseWords()"> 中文句子默寫（擷取完整句子，語音讀出句子）</label>
+      <label><input type="radio" name="parseMode" value="english" onchange="parseWords()"> 英文單字默寫（擷取英文單字）</label>
+      <label><input type="radio" name="parseMode" value="english-sentence" onchange="parseWords()"> 英文句子默寫（擷取完整句子，語音讀出句子）</label>
+    </div>
+
+    <div class="word-preview" id="wordPreview">
+      <h4>已擷取 <span id="wordCount">0</span> 個題目，確認開始默寫？</h4>
+      <div class="word-chips" id="wordChips"></div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-secondary" onclick="resetUpload(); showScreen('homeScreen')">取消</button>
+        <button class="btn btn-primary" onclick="startFileQuiz()">開始默寫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div class="screen" id="quizScreen">
+    <button class="back-btn" onclick="stopSpeech(); showScreen('homeScreen')">放棄並返回</button>
+    <div class="quiz-info">
+      <span id="quizModeLabel">中文默寫</span>
+      <span id="quizCounter">第 1 題 / 共 10 題</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div class="question-card">
+      <div class="question-label" id="questionLabel">請寫出下面的字詞：</div>
+      <div class="question-hint" id="questionHint">shu bao</div>
+      <div class="tts-row">
+        <button class="tts-btn" id="ttsBtn" onclick="speakHint()" title="語音朗讀">語音</button>
+        <button class="tts-btn" id="pauseBtn" onclick="togglePause()" title="暫停/繼續">暫停</button>
+        <button class="tts-btn" id="repeatBtn" onclick="repeatSpeech()" title="重複播放">重複</button>
+        <div class="speed-btns">
+          <button class="speed-btn" data-speed="very-fast" onclick="setSpeed('very-fast')">超快</button>
+          <button class="speed-btn" data-speed="fast" onclick="setSpeed('fast')">快</button>
+          <button class="speed-btn active" data-speed="normal" onclick="setSpeed('normal')">正常</button>
+          <button class="speed-btn" data-speed="slow" onclick="setSpeed('slow')">慢</button>
+          <button class="speed-btn" data-speed="very-slow" onclick="setSpeed('very-slow')">很慢</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="text" class="answer-input" id="answerInput" placeholder="在這裡輸入答案..." autocomplete="off" onkeydown="if(event.key==='Enter') checkAnswer()">
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="stopSpeech(); showScreen('homeScreen')">放棄</button>
+      <button class="btn btn-primary" id="actionBtn" onclick="checkAnswer()">檢查答案</button>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div class="screen" id="resultScreen">
+    <button class="back-btn" onclick="showScreen('homeScreen')">返回 主選單</button>
+    <div class="result-card">
+      <div class="result-emoji" id="resultEmoji">慶祝</div>
+      <div class="result-score" id="resultScore">80 分</div>
+      <div class="result-detail">
+        <div class="row"><span>答對題數</span><span id="correctCount">8 / 10</span></div>
+        <div class="row"><span>答錯題數</span><span id="wrongCount">2 / 10</span></div>
+        <div class="row"><span>正確率</span><span id="accuracy">80%</span></div>
+      </div>
+      <div class="wrong-list hidden" id="wrongList">
+        <h4>錯題回顧</h4>
+        <div id="wrongItems"></div>
+      </div>
+      <div class="btn-row" style="margin-top:24px;">
+        <button class="btn btn-secondary" onclick="showScreen('homeScreen')">返回主選單</button>
+        <button class="btn btn-primary" id="retryBtn" onclick="retryQuiz()">再練一次</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tesseract.js (OCR) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<script>
+// ========== 語音（Web Speech API）==========
+
+// Chrome 必須先有使用者互動（點擊）才能播放語音
+let userHasInteracted = false;
+let voicesLoaded = false;
+let currentUtterance = null;
+let speechSpeed = 1.0;
+const speedMap = { 'very-fast': 2.0, 'fast': 1.6, 'normal': 1.0, 'slow': 0.6, 'very-slow': 0.3 };
+
+// 等待語音清單載入（Chrome 需要 onvoiceschanged 事件）
+function loadVoices() {
+  return new Promise(function(resolve) {
+    var voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      voicesLoaded = true;
+      resolve(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = function() {
+        var v = window.speechSynthesis.getVoices();
+        voicesLoaded = true;
+        window.speechSynthesis.onvoiceschanged = null;
+        resolve(v);
+      };
+    }
+  });
+}
+
+// 選擇合適的語音（優先符合語系的）
+function pickVoice(lang) {
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) {
+    console.warn('語音清單是空的');
+    return null;
+  }
+  // 先找完全符合的
+  var exact = voices.find(function(v) { return v.lang === lang; });
+  if (exact) {
+    console.log('找到精確語音：', exact.name, exact.lang);
+    return exact;
+  }
+  // 找語系開頭符合的（例如 zh-TW 符合 zh）
+  var prefix = lang.split('-')[0];
+  var fallback = voices.find(function(v) { return v.lang.startsWith(prefix); });
+  if (fallback) {
+    console.log('找到備用語音：', fallback.name, fallback.lang);
+    return fallback;
+  }
+  // 最後備用：找任何包含該語言的
+  var anyMatch = voices.find(function(v) { return v.lang.includes(prefix); });
+  if (anyMatch) {
+    console.log('找到部分符合語音：', anyMatch.name, anyMatch.lang);
+    return anyMatch;
+  }
+  console.log('使用預設語音：', voices[0].name, voices[0].lang);
+  return voices[0];
+}
+
+// 頁面載入後，等待使用者第一次點擊
+document.addEventListener('click', function initSpeech() {
+  userHasInteracted = true;
+  loadVoices().then(function(voices) {
+    console.log('語音清單已載入，共', voices.length, '種語音');
+  }).catch(function(e) { console.error('語音清單載入失敗', e); });
+}, { once: true });
+
+function setSpeed(level) {
+  speechSpeed = speedMap[level];
+  document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.speed-btn[data-speed="' + level + '"]').classList.add('active');
+  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+    window.speechSynthesis.cancel();
+    setTimeout(function() { speakHint(); }, 150);
+  }
+}
+
+function speakHint() {
+  // 語音應該讀答案，而不是提示
+  var q = questions[currentIndex];
+  if (!q) return;
+  var text = q.answer;  // 讀答案而不是提示
+  if (!text) return;
+
+  if (!('speechSynthesis' in window)) {
+    alert('您的瀏覽器不支援語音朗讀功能。');
+    return;
+  }
+
+  if (!userHasInteracted) {
+    alert('請先點擊頁面上的任何按鈕（例如「開始默寫」），再使用語音功能。');
+    return;
+  }
+
+  // 確保語音清單已載入
+  if (!voicesLoaded) {
+    loadVoices().then(function() { doSpeak(text); });
+  } else {
+    doSpeak(text);
+  }
+}
+
+function doSpeak(text) {
+  stopSpeech();
+  var btn = document.getElementById('ttsBtn');
+  btn.classList.add('speaking');
+
+  var lang = (currentMode === 'chinese') ? 'zh-TW' : 'en-US';
+  var voice = pickVoice(lang);
+  
+  if (!voice) {
+    console.error('找不到合適的語音！');
+    alert('找不到合適的語音。請檢查瀏覽器的語音設定。');
+    btn.classList.remove('speaking');
+    return;
+  }
+
+  console.log('正在朗讀：', text, '| 語言：', lang, '| 語音：', voice.name);
+
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  u.voice = voice;
+  u.rate = speechSpeed;
+  u.pitch = 1;
+
+  u.onend = function() {
+    console.log('語音播放結束');
+    btn.classList.remove('speaking');
+    currentUtterance = null;
+  };
+  u.onerror = function(e) {
+    console.error('語音錯誤：', e);
+    btn.classList.remove('speaking');
+    currentUtterance = null;
+  };
+
+  currentUtterance = u;
+  window.speechSynthesis.speak(u);
+}
+
+function stopSpeech() {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  document.getElementById('ttsBtn').classList.remove('speaking');
+  document.getElementById('pauseBtn').textContent = '暫停';
+  document.getElementById('pauseBtn').classList.remove('paused');
+  currentUtterance = null;
+}
+
+// ========== 暫停/繼續語音 ==========
+function togglePause() {
+  if (!('speechSynthesis' in window)) return;
+  
+  var pauseBtn = document.getElementById('pauseBtn');
+  
+  if (window.speechSynthesis.paused) {
+    // 目前是暫停狀態，繼續播放
+    window.speechSynthesis.resume();
+    pauseBtn.textContent = '暫停';
+    pauseBtn.classList.remove('paused');
+    document.getElementById('ttsBtn').classList.add('speaking');
+    console.log('語音繼續播放');
+  } else if (window.speechSynthesis.speaking) {
+    // 目前正在播放，暫停
+    window.speechSynthesis.pause();
+    pauseBtn.textContent = '繼續';
+    pauseBtn.classList.add('paused');
+    document.getElementById('ttsBtn').classList.remove('speaking');
+    console.log('語音已暫停');
+  } else {
+    // 沒有在播放，重新開始
+    speakHint();
+    pauseBtn.textContent = '暫停';
+    pauseBtn.classList.remove('paused');
+  }
+}
+
+// ========== 重複播放語音 ==========
+function repeatSpeech() {
+  console.log('重複播放語音');
+  var pauseBtn = document.getElementById('pauseBtn');
+  pauseBtn.textContent = '暫停';
+  pauseBtn.classList.remove('paused');
+  
+  // 停止目前的語音並重新播放
+  stopSpeech();
+  setTimeout(function() { speakHint(); }, 100);
+}
+
+// ========== 拼音對照表 ==========
+var pinyinMap = {
+  '書':'shū','包':'bāo','蘋':'píng','果':'guǒ','太':'tài','陽':'yáng',
+  '朋':'péng','友':'yǒu','老':'lǎo','師':'shī','春':'chūn','天':'tiān',
+  '蝴':'hú','蝶':'dié','圖':'tú','館':'guǎn','謝':'xiè','彩':'cǎi',
+  '虹':'hóng','小':'xiǎo','學':'xué','生':'shēng','好':'hǎo','我':'wǒ',
+  '你':'nǐ','他':'tā','是':'shì','不':'bù','了':'le','的':'de',
+  '在':'zài','有':'yǒu','人':'rén','大':'dà','花':'huā','鳥':'niǎo',
+  '魚':'yú','貓':'māo','狗':'gǒu','球':'qiú','車':'chē','樹':'shù',
+  '草':'cǎo','河':'hé','山':'shān','月':'yuè','星':'xīng','雲':'yún',
+  '雨':'yǔ','風':'fēng','雪':'xuě','兔':'tù','猴':'hóu','象':'xiàng',
+  '龍':'lóng','馬':'mǎ','牛':'niú','羊':'yáng','雞':'jī',
+  '門':'mén','窗':'chuāng','桌':'zhuō','椅':'yǐ','床':'chuáng',
+  '家':'jiā','校':'xiào','班':'bān','年':'nián',
+  '紅':'hóng','黃':'huáng','藍':'lán','綠':'lǜ','白':'bái','黑':'hēi',
+  '高':'gāo','低':'dī','快':'kuài','慢':'màn'
+};
+
+function getPinyin(word) {
+  var result = [];
+  for (var i = 0; i < word.length; i++) {
+    var ch = word[i];
+    if (pinyinMap[ch]) result.push(pinyinMap[ch]);
+  }
+  if (result.length === 0) return '（請默寫）';
+  return result.join(' ');
+}
+
+// ========== 內建題庫 ==========
+var builtinQuestions = {
+  chinese: [
+    { answer: '書包', hint: 'shū bāo', extra: '上學要背的東西' },
+    { answer: '蘋果', hint: 'píng guǒ', extra: '一種紅色的水果' },
+    { answer: '太陽', hint: 'tài yáng', extra: '白天出現在天空' },
+    { answer: '朋友', hint: 'péng yǒu', extra: '一起玩的人' },
+    { answer: '老師', hint: 'lǎo shī', extra: '在學校教書的人' },
+    { answer: '春天', hint: 'chūn tiān', extra: '四季的第一個季節' },
+    { answer: '蝴蝶', hint: 'hú dié', extra: '會飛的漂亮蟲蟲' },
+    { answer: '圖書館', hint: 'tú shū guǎn', extra: '借書和看書的地方' },
+    { answer: '謝謝', hint: 'xiè xiè', extra: '表示感謝的話' },
+    { answer: '彩虹', hint: 'cǎi hóng', extra: '雨後出現的七色光' }
+  ],
+  english: [
+    { answer: 'apple', hint: '蘋果', extra: 'A red or green fruit' },
+    { answer: 'teacher', hint: '老師', extra: 'A person who teaches' },
+    { answer: 'sun', hint: '太陽', extra: 'It gives us light' },
+    { answer: 'book', hint: '書', extra: 'We read stories in it' },
+    { answer: 'cat', hint: '貓', extra: 'An animal that says meow' },
+    { answer: 'water', hint: '水', extra: 'We drink this every day' },
+    { answer: 'friend', hint: '朋友', extra: 'Someone you play with' },
+    { answer: 'school', hint: '學校', extra: 'Where students learn' },
+    { answer: 'happy', hint: '快樂', extra: 'Feeling good and smiling' },
+    { answer: 'rainbow', hint: '彩虹', extra: 'Seven colors in the sky' }
+  ]
+};
+
+// ========== 狀態 ==========
+var currentMode = '';
+var questions = [];
+var currentIndex = 0;
+var correctAnswers = 0;
+var wrongAnswers = [];
+var answered = false;
+var fileQuestions = [];
+
+// ========== 畫面切換 ==========
+function showScreen(id) {
+  stopSpeech();
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  if (id === 'quizScreen') {
+    setTimeout(function() { document.getElementById('answerInput').focus(); }, 100);
+  }
+}
+
+// ========== 上傳頁面切換 ==========
+function switchTab(tab) {
+  document.getElementById('tabImage').classList.remove('active');
+  document.getElementById('tabPdf').classList.remove('active');
+  if (tab === 'image') {
+    document.getElementById('tabImage').classList.add('active');
+    document.getElementById('imageArea').style.display = '';
+    document.getElementById('pdfArea').style.display = 'none';
+  } else {
+    document.getElementById('tabPdf').classList.add('active');
+    document.getElementById('imageArea').style.display = 'none';
+    document.getElementById('pdfArea').style.display = '';
+  }
+  resetUpload();
+}
+
+// ========== 圖片上傳 ==========
+function handleImage(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  showFileInfo(file.name);
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('imgPreview').src = e.target.result;
+    document.getElementById('imgPreviewBox').style.display = '';
+    startOCR(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// 圖片拖曳
+var imgDropArea = document.getElementById('imgDropArea');
+imgDropArea.addEventListener('dragover', function(e) { e.preventDefault(); imgDropArea.style.borderColor = '#667eea'; });
+imgDropArea.addEventListener('dragleave', function() { imgDropArea.style.borderColor = '#d0d7ff'; });
+imgDropArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  imgDropArea.style.borderColor = '#d0d7ff';
+  var file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('imgInput').files = dt.files;
+    handleImage({ target: document.getElementById('imgInput') });
+  }
+});
+
+// ========== PDF 上傳 ==========
+function handlePdf(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  showFileInfo(file.name);
+  document.getElementById('imgPreviewBox').style.display = 'none';
+  startPdfParse(file);
+}
+
+var pdfDropArea = document.getElementById('pdfDropArea');
+pdfDropArea.addEventListener('dragover', function(e) { e.preventDefault(); pdfDropArea.style.borderColor = '#667eea'; });
+pdfDropArea.addEventListener('dragleave', function() { pdfDropArea.style.borderColor = '#d0d7ff'; });
+pdfDropArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  pdfDropArea.style.borderColor = '#d0d7ff';
+  var file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.pdf')) {
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('pdfInput').files = dt.files;
+    handlePdf({ target: document.getElementById('pdfInput') });
+  } else {
+    alert('請拖入 PDF 檔案！');
+  }
+});
+
+function showFileInfo(name) {
+  document.getElementById('fileName').textContent = '檔案：' + name;
+  document.getElementById('fileInfo').classList.add('show');
+}
+
+function resetUpload() {
+  stopSpeech();
+  document.getElementById('fileInfo').classList.remove('show');
+  document.getElementById('imgPreviewBox').style.display = 'none';
+  document.getElementById('imgInput').value = '';
+  document.getElementById('pdfInput').value = '';
+  document.getElementById('fileStatus').classList.remove('show');
+  document.getElementById('textResult').classList.remove('show');
+  document.getElementById('parseOptions').style.display = 'none';
+  document.getElementById('wordPreview').classList.remove('show');
+  fileQuestions = [];
+}
+
+// ========== OCR 圖片辨識 ==========
+function startOCR(imageSrc) {
+  var statusEl = document.getElementById('fileStatus');
+  var statusText = document.getElementById('fileStatusText');
+  var fill = document.getElementById('fileProgressFill');
+  statusEl.className = 'pdf-status show loading';
+  statusText.textContent = '正在辨識圖片文字，請稍候...';
+  fill.style.width = '10%';
+
+  Tesseract.recognize(imageSrc, 'chi_tra+chi_sim+eng', {
+    logger: function(m) {
+      if (m.status === 'recognizing text') {
+        fill.style.width = (10 + m.progress * 80) + '%';
+      }
+    }
+  }).then(function(result) {
+    fill.style.width = '100%';
+    statusText.textContent = '辨識完成！請確認下方文字，可手動編輯修正：';
+    statusEl.className = 'pdf-status show done';
+    showTextResult(result.data.text);
+  }).catch(function(err) {
+    statusText.textContent = '辨識失敗：' + err.message;
+    statusEl.className = 'pdf-status show error';
+  });
+}
+
+// ========== PDF 解析 ==========
+function startPdfParse(file) {
+  var statusEl = document.getElementById('fileStatus');
+  var statusText = document.getElementById('fileStatusText');
+  var fill = document.getElementById('fileProgressFill');
+  statusEl.className = 'pdf-status show loading';
+  statusText.textContent = '正在讀取 PDF 檔案...';
+  fill.style.width = '10%';
+
+  file.arrayBuffer().then(function(buffer) {
+    fill.style.width = '30%';
+    statusText.textContent = '正在解析 PDF 頁面...';
+    var data = new Uint8Array(buffer);
+    pdfjsLib.getDocument({ data: data }).promise.then(function(pdf) {
+      var numPages = pdf.numPages;
+      var fullText = '';
+      var promises = [];
+      for (var i = 1; i <= numPages; i++) {
+        (function(pageNum) {
+          promises.push(
+            pdf.getPage(pageNum).then(function(page) {
+              statusText.textContent = '正在讀取第 ' + pageNum + ' / ' + numPages + ' 頁...';
+              fill.style.width = (30 + (pageNum / numPages) * 60) + '%';
+              return page.getTextContent().then(function(content) {
+                var pageText = content.items.map(function(item) { return item.str; }).join(' ');
+                fullText += pageText + '\n';
+              });
+            })
+          );
+        })(i);
+      }
+      Promise.all(promises).then(function() {
+        fill.style.width = '100%';
+        if (!fullText.trim()) {
+          statusText.textContent = '此 PDF 無法提取文字（可能是掃描圖片型 PDF）。請嘗試上傳該頁面的圖片照片。';
+          statusEl.className = 'pdf-status show error';
+          return;
+        }
+        statusText.textContent = 'PDF 解析完成！共 ' + numPages + ' 頁，請確認下方文字：';
+        statusEl.className = 'pdf-status show done';
+        showTextResult(fullText);
+      }).catch(function(err) {
+        statusText.textContent = 'PDF 解析失敗：' + err.message;
+        statusEl.className = 'pdf-status show error';
+      });
+    }).catch(function(err) {
+      statusText.textContent = 'PDF 讀取失敗：' + err.message;
+      statusEl.className = 'pdf-status show error';
+    });
+  });
+}
+
+function showTextResult(text) {
+  document.getElementById('textArea').value = text.trim();
+  document.getElementById('textResult').classList.add('show');
+  document.getElementById('parseOptions').style.display = '';
+}
+
+// ========== 解析文字為題目 ==========
+function parseWords() {
+  var mode = document.querySelector('input[name="parseMode"]:checked');
+  if (!mode) return;
+  mode = mode.value;
+
+  var rawText = document.getElementById('textArea').value;
+  var words = [];
+
+  if (mode === 'chinese') {
+    // 中文單字模式：擷取中文字詞
+    var matches = rawText.match(/[\u4e00-\u9fff]{1,6}/g);
+    if (matches) {
+      var seen = {};
+      for (var i = 0; i < matches.length; i++) {
+        var t = matches[i].trim();
+        if (t.length >= 1 && !seen[t]) {
+          seen[t] = true;
+          words.push(t);
+        }
+      }
+    }
+  } else if (mode === 'chinese-sentence') {
+    // 中文句子模式：擷取完整句子
+    var sentences = rawText.split(/[。！？\n]+/g);
+    var seenS = {};
+    for (var s = 0; s < sentences.length; s++) {
+      var sent = sentences[s].trim();
+      // 句子必須包含中文且長度適中（5-50字）
+      if (sent.length >= 5 && sent.length <= 50 && /^[\u4e00-\u9fff，、：；（）「」】]+$/.test(sent.replace(/[，、：；（）「」】\s]/g, '')) && !seenS[sent]) {
+        seenS[sent] = true;
+        words.push(sent);
+      }
+    }
+  } else if (mode === 'english') {
+    // 英文單字模式
+    var matches2 = rawText.match(/\b[a-zA-Z]{1,20}\b/g);
+    if (matches2) {
+      var seen2 = {};
+      var skip = { 'the':true,'and':true,'is':true,'in':true,'on':true,'to':true,'of':true,'a':true,'an':true,'for':true,'with':true,'this':true,'that':true,'it':true,'be':true,'are':true,'was':true,'by':true };
+      for (var j = 0; j < matches2.length; j++) {
+        var m = matches2[j].toLowerCase();
+        if (!skip[m] && !seen2[m]) {
+          seen2[m] = true;
+          words.push(matches2[j]);
+        }
+      }
+    }
+  } else if (mode === 'english-sentence') {
+    // 英文句子模式：擷取完整句子
+    var engSentences = rawText.split(/[.!?\n]+/g);
+    var seenE = {};
+    for (var es = 0; es < engSentences.length; es++) {
+      var esent = engSentences[es].trim();
+      // 句子必須包含英文且長度適中（5-100字元）
+      if (esent.length >= 5 && esent.length <= 100 && /[a-zA-Z]/.test(esent) && !seenE[esent]) {
+        seenE[esent] = true;
+        words.push(esent);
+      }
+    }
+  }
+
+  if (words.length === 0) {
+    var modeName = '';
+    if (mode === 'chinese') modeName = '中文字詞';
+    else if (mode === 'chinese-sentence') modeName = '中文句子';
+    else if (mode === 'english') modeName = '英文單字';
+    else if (mode === 'english-sentence') modeName = '英文句子';
+    alert('無法從檔案中擷取到有效的' + modeName + '。');
+    return;
+  }
+
+  if (words.length > 40) words = words.slice(0, 40);
+
+  // 根據模式設定題目
+  if (mode === 'chinese') {
+    fileQuestions = words.map(function(w) {
+      return { answer: w, hint: getPinyin(w) };
+    });
+  } else if (mode === 'chinese-sentence') {
+    fileQuestions = words.map(function(w) {
+      return { answer: w, hint: '請聽寫句子：' };
+    });
+  } else if (mode === 'english') {
+    fileQuestions = words.map(function(w) {
+      return { answer: w, hint: '請拼寫出這個英文字' };
+    });
+  } else if (mode === 'english-sentence') {
+    fileQuestions = words.map(function(w) {
+      return { answer: w, hint: 'Please write the sentence:' };
+    });
+  }
+
+  document.getElementById('wordCount').textContent = words.length;
+  var chipsEl = document.getElementById('wordChips');
+  chipsEl.innerHTML = '';
+  for (var k = 0; k < words.length; k++) {
+    var chip = document.createElement('span');
+    chip.className = 'word-chip';
+    // 句子太長的話截斷顯示
+    var displayText = words[k].length > 20 ? words[k].substring(0, 20) + '...' : words[k];
+    chip.textContent = displayText;
+    chip.title = words[k]; // 滑鼠懸停在可以看到完整內容
+    chipsEl.appendChild(chip);
+  }
+  document.getElementById('wordPreview').classList.add('show');
+}
+
+// ========== 開始檔案默寫 ==========
+function startFileQuiz() {
+  if (!fileQuestions || fileQuestions.length === 0) return;
+  var mode = document.querySelector('input[name="parseMode"]:checked');
+  if (!mode) return;
+  mode = mode.value;
+  currentMode = mode;
+  questions = shuffleArray(fileQuestions.slice());
+  currentIndex = 0;
+  correctAnswers = 0;
+  wrongAnswers = [];
+  answered = false;
+  
+  var modeLabel = '';
+  if (mode === 'chinese') modeLabel = '中文單字默寫（檔案出題）';
+  else if (mode === 'chinese-sentence') modeLabel = '中文句子默寫（檔案出題）';
+  else if (mode === 'english') modeLabel = '英文單字默寫（檔案出題）';
+  else if (mode === 'english-sentence') modeLabel = '英文句子默寫（檔案出題）';
+  
+  document.getElementById('quizModeLabel').textContent = modeLabel;
+  showScreen('quizScreen');
+  loadQuestion();
+}
+
+// ========== 內建題庫開始 ==========
+function startQuiz(mode) {
+  currentMode = mode;
+  questions = shuffleArray(builtinQuestions[mode].slice());
+  currentIndex = 0;
+  correctAnswers = 0;
+  wrongAnswers = [];
+  answered = false;
+  document.getElementById('quizModeLabel').textContent = (mode === 'chinese') ? '中文默寫' : '英文默寫';
+  showScreen('quizScreen');
+  loadQuestion();
+}
+
+// ========== 載入題目 ==========
+function loadQuestion() {
+  answered = false;
+  var q = questions[currentIndex];
+  var total = questions.length;
+  document.getElementById('quizCounter').textContent = '第 ' + (currentIndex + 1) + ' 題 / 共 ' + total + ' 題';
+  document.getElementById('progressFill').style.width = (currentIndex / total * 100) + '%';
+  document.getElementById('questionHint').textContent = q.hint;
+  
+  // 根據模式設定不同的標題和輸入欄位
+  var isSentence = (currentMode === 'chinese-sentence' || currentMode === 'english-sentence');
+  if (currentMode === 'chinese') {
+    document.getElementById('questionLabel').textContent = '請寫出拼音對應的中文字詞：';
+  } else if (currentMode === 'chinese-sentence') {
+    document.getElementById('questionLabel').textContent = '請聽寫出完整的句子：';
+  } else if (currentMode === 'english') {
+    document.getElementById('questionLabel').textContent = '請拼寫出提示對應的英文單字：';
+  } else if (currentMode === 'english-sentence') {
+    document.getElementById('questionLabel').textContent = 'Please listen and write the full sentence:';
+  }
+  
+  // 句子模式時把輸入欄位變高
+  var input = document.getElementById('answerInput');
+  if (isSentence) {
+    input.style.height = '80px';
+    input.style.fontSize = '18px';
+    input.placeholder = '在這裡輸入完整的句子...';
+  } else {
+    input.style.height = '';
+    input.style.fontSize = '';
+    input.placeholder = '在這裡輸入答案...';
+  }
+  
+  input.value = '';
+  input.className = 'answer-input';
+  input.disabled = false;
+  input.focus();
+
+  var fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  var btn = document.getElementById('actionBtn');
+  btn.textContent = '檢查答案';
+  btn.className = 'btn btn-primary';
+
+  setTimeout(function() { speakHint(); }, 500);
+}
+
+// ========== 檢查答案 ==========
+function checkAnswer() {
+  if (answered) {
+    currentIndex++;
+    if (currentIndex >= questions.length) {
+      stopSpeech();
+      showResult();
+    } else {
+      loadQuestion();
+    }
+    return;
+  }
+
+  var input = document.getElementById('answerInput');
+  var userAnswer = input.value.trim();
+  if (!userAnswer) return;
+
+  answered = true;
+  var q = questions[currentIndex];
+  var isCorrect = (userAnswer.toLowerCase() === q.answer.toLowerCase());
+  input.disabled = true;
+
+  var fb = document.getElementById('feedback');
+  fb.classList.add('show');
+
+  if (isCorrect) {
+    correctAnswers++;
+    input.className = 'answer-input correct';
+    fb.className = 'feedback show correct-feedback';
+    fb.innerHTML = '答對了！太棒了！';
+  } else {
+    wrongAnswers.push({ hint: q.hint, yourAnswer: userAnswer, correctAnswer: q.answer });
+    input.className = 'answer-input wrong';
+    fb.className = 'feedback show wrong-feedback';
+    fb.innerHTML = '答錯了～正確答案是：<div class="correct-answer">' + q.answer + '</div>';
+  }
+
+  stopSpeech();
+
+  var btn = document.getElementById('actionBtn');
+  btn.textContent = (currentIndex + 1 >= questions.length) ? '看結果' : '下一題';
+  btn.className = isCorrect ? 'btn btn-success' : 'btn btn-primary';
+}
+
+// ========== 顯示結果 ==========
+function showResult() {
+  var total = questions.length;
+  var score = Math.round(correctAnswers / total * 100);
+  document.getElementById('progressFill').style.width = '100%';
+
+  var emoji = '慶祝';
+  if (score === 100) emoji = '冠軍';
+  else if (score >= 80) emoji = '開心';
+  else if (score >= 60) emoji = '加油';
+  else emoji = '讀書';
+
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = score + ' 分';
+  document.getElementById('correctCount').textContent = correctAnswers + ' / ' + total;
+  document.getElementById('wrongCount').textContent = (total - correctAnswers) + ' / ' + total;
+  document.getElementById('accuracy').textContent = score + '%';
+
+  var wrongList = document.getElementById('wrongList');
+  var wrongItems = document.getElementById('wrongItems');
+  wrongItems.innerHTML = '';
+
+  if (wrongAnswers.length > 0) {
+    wrongList.classList.remove('hidden');
+    for (var i = 0; i < wrongAnswers.length; i++) {
+      var w = wrongAnswers[i];
+      var div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = '<span>' + w.hint + ' → 你的答案：<b>' + (w.yourAnswer || '空白') + '</b></span><span style="color:#c62828">正確：' + w.correctAnswer + '</span>';
+      wrongItems.appendChild(div);
+    }
+  } else {
+    wrongList.classList.add('hidden');
+  }
+
+  showScreen('resultScreen');
+}
+
+// ========== 再練一次 ==========
+function retryQuiz() {
+  questions = shuffleArray(questions.slice());
+  currentIndex = 0;
+  correctAnswers = 0;
+  wrongAnswers = [];
+  answered = false;
+  showScreen('quizScreen');
+  loadQuestion();
+}
+
+// ========== 工具函式 ==========
+function shuffleArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = a[i];
+    a[i] = a[j];
+    a[j] = temp;
+  }
+  return a;
+}
+
+// ========== PWA 安裝功能 ==========
+let deferredPrompt = null;
+
+// 監聽 PWA 安裝提示事件
+window.addEventListener('beforeinstallprompt', function(e) {
+  console.log('PWA 可以安裝');
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').classList.remove('hidden');
+});
+
+// 安裝按鈕點擊事件
+function installApp() {
+  if (!deferredPrompt) {
+    alert('目前無法安裝，請使用 Chrome 或 Edge 瀏覽器，並從網路開啟此頁面。');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(choiceResult) {
+    if (choiceResult.outcome === 'accepted') {
+      console.log('使用者接受了安裝');
+    } else {
+      console.log('使用者拒絕了安裝');
+    }
+    deferredPrompt = null;
+    document.getElementById('installBtn').classList.add('hidden');
+  });
+}
+
+// 監聽安裝完成事件
+window.addEventListener('appinstalled', function() {
+  console.log('PWA 安裝完成');
+  document.getElementById('installBtn').classList.add('hidden');
+});
+
+// ========== 註冊 Service Worker（離線功能）==========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./service-worker.js').then(function(registration) {
+      console.log('Service Worker 註冊成功：', registration.scope);
+    }).catch(function(error) {
+      console.log('Service Worker 註冊失敗：', error);
+    });
+  });
+}
+</script>
+</body>
+</html>

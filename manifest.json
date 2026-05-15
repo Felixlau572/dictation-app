@@ -1,0 +1,23 @@
+{
+  "name": "小小默寫家",
+  "short_name": "默寫家",
+  "description": "讓默寫變得好玩！幫助小學生練習中/英文單字和句子",
+  "start_url": "./dictation.html",
+  "display": "standalone",
+  "background_color": "#a8edea",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "utilities"]
+}
